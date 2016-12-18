@@ -34,12 +34,12 @@ var _2048 = (function (window) {
     // Is an array could be merged or moved from bottom to top.
     function canGoeUp(matrix) {
         var i = 0, j = 0, _size = matrix.length;
-        for (i = 0; i < _size - 1; i++) {
-            for (j = 0; j < _size; j++) {
-                if (matrix[j][i] > 0 && matrix[j][i] === matrix[j][i + 1]) {
+        for (i = 0; i < _size; i++) {
+            for (j = 0; j < _size - 1; j++) {
+                if (matrix[j][i] > 0 && matrix[j][i] === matrix[j + 1][i]) {
                     return true;
                 }
-                if (matrix[j][i] === 0 && matrix[j][i + 1] > 0) {
+                if (matrix[j][i] === 0 && matrix[j + 1][i] > 0) {
                     return true;
                 }
             }
@@ -50,12 +50,12 @@ var _2048 = (function (window) {
     // Is an array could be merged or moved from top to bottom.
     function canGoDown(matrix) {
         var i = 0, j = 0, _size = matrix.length;
-        for (i = 0; i < _size - 1; i++) {
-            for (j = 0; j < _size; j++) {
-                if (matrix[j][i] > 0 && matrix[j][i] === matrix[j][i + 1]) {
+        for (i = 0; i < _size; i++) {
+            for (j = 0; j < _size - 1; j++) {
+                if (matrix[j][i] > 0 && matrix[j][i] === matrix[j + 1][i]) {
                     return true;
                 }
-                if (matrix[j][i] > 0 && matrix[j][i + 1] === 0) {
+                if (matrix[j][i] > 0 && matrix[j + 1][i] === 0) {
                     return true;
                 }
             }
@@ -77,12 +77,63 @@ var _2048 = (function (window) {
                 }
             }
         }
+        return filled;
     }
 
     // Move item of matrix to make all numbers(>0) to go one side.
     function move(matrix, d) {
         var filled = getFilledItems(matrix);
-        switch (d) {}
+        var i = 0, j = 0, len = matrix.length, line = [], lineLength = 0;
+        switch (d) {
+            case 'left':
+                for (i = 0; i < len; i++) {
+                    line = filled.filter(function (item) {
+                        return item.flag[1] === i;
+                    });
+                    lineLength = line.length;
+                    for (j = 0; j < lineLength; j++) {
+                        matrix[i][j] = line[j].value;
+                        matrix[line[j].flag[0]][line[j].flag[1]] = 0;
+                    }
+                }
+                break;
+            case 'right':
+                for (i = 0; i < len; i++) {
+                    line = filled.filter(function (item) {
+                        return item.flag[1] === i;
+                    });
+                    lineLength = line.length;
+                    for (j = len - 1; j >= lineLength; j--) {
+                        matrix[i][j] = line[j].value;
+                        matrix[line[j].flag[0]][line[j].flag[1]] = 0;
+                    }
+                }
+                break;
+            case 'up':
+                for (i = 0; i < len; i++) {
+                    line = filled.filter(function (item) {
+                        return item.flag[0] === i;
+                    });
+                    lineLength = line.length;
+                    for (j = 0; j < lineLength; j++) {
+                        matrix[j][i] = line[j].value;
+                        matrix[line[j].flag[0]][line[j].flag[1]] = 0;
+                    }
+                }
+                break;
+            case 'down':
+                for (i = 0; i < len; i++) {
+                    line = filled.filter(function (item) {
+                        return item.flag[0] === i;
+                    });
+                    lineLength = line.length;
+                    for (j = len - 1; j >= lineLength; j--) {
+                        matrix[j][i] = line[len - j - 1].value;
+                        matrix[line[len - j - 1].flag[0]][line[len - j - 1].flag[1]] = 0;
+                    }
+                }
+                break;
+        }
     }
 
     var Matrix = {
@@ -161,6 +212,7 @@ var _2048 = (function (window) {
         }
     };
 
+
     // 随机生成2或4
     function random2_4() {
         return Math.floor(Math.random() * 100) >= 50 ? 4 : 2;
@@ -215,8 +267,8 @@ var _2048 = (function (window) {
         return this;
     }
 
-    function displayMatrix() {
-        var i = 0, j = 0, str = '';
+    function displayMatrix(matrix) {
+        var i = 0, j = 0, str = '', _size = matrix.length;
         for (i = 0; i < _size; i++) {
             str += '\n[';
             for (j = 0; j < _size; j++) {
@@ -229,33 +281,33 @@ var _2048 = (function (window) {
     }
 
     return {
-        init: init,
-        setSize: setSize,
-        getSize: getSize,
-        getScore: getScore,
-        getMatrix: getMatrix,
-        mergeUp: mergeUp,
-        mergeDown: mergeDown,
-        mergeLeft: mergeLeft,
-        mergeRight: mergeRight,
+        canGoLeft: canGoLeft,
+        canGoRight: canGoRight,
+        canGoeUp: canGoeUp,
+        canGoDown: canGoDown,
+        getFilledItems: getFilledItems,
         move: move,
-        displayMatrix: displayMatrix,
-        matrix: matrix
+        displayMatrix: displayMatrix
     };
 }(window));
 
-_2048.matrix = [
-    [0, 0, 2, 2],
-    [2, 0, 2, 2],
-    [2, 0, 0, 2],
-    [0, 4, 2, 2]
+var matrix = [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0]
 ];
-console.log(_2048.displayMatrix());
-// a.move(37);
-// console.log(a.displayMatrix());
-_2048.move(38);
-console.log(_2048.displayMatrix());
-// a.move(39);
-// console.log(a.displayMatrix());
-// a.move(40);
-// console.log(a.displayMatrix());
+console.log(_2048.displayMatrix(matrix));
+console.log('canGoLeft  ' + _2048.canGoLeft(matrix));
+console.log('canGoRight ' + _2048.canGoRight(matrix));
+console.log('canGoeUp   ' + _2048.canGoeUp(matrix));
+console.log('canGoDown  ' + _2048.canGoDown(matrix));
+console.log(_2048.getFilledItems(matrix));
+_2048.move(matrix, 'up');
+console.log('up\n', _2048.displayMatrix(matrix));
+_2048.move(matrix, 'down');
+console.log('down\n', _2048.displayMatrix(matrix));
+_2048.move(matrix, 'left');
+console.log('left\n', _2048.displayMatrix(matrix));
+_2048.move(matrix, 'right');
+console.log('right\n', _2048.displayMatrix(matrix));
