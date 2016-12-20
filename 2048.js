@@ -1,4 +1,4 @@
-var _2048 = (function (window) {
+var _2048 = (function (window, document) {
     // Is an array could be merged or moved from right to left.
     function canGoLeft(matrix) {
         var i = 0, j = 0, _size = matrix.length;
@@ -32,7 +32,7 @@ var _2048 = (function (window) {
     }
 
     // Is an array could be merged or moved from bottom to top.
-    function canGoeUp(matrix) {
+    function canGoUp(matrix) {
         var i = 0, j = 0, _size = matrix.length;
         for (i = 0; i < _size; i++) {
             for (j = 0; j < _size - 1; j++) {
@@ -83,85 +83,311 @@ var _2048 = (function (window) {
     // Move item of matrix to make all numbers(>0) to go one side.
     function move(matrix, d) {
         var filled = getFilledItems(matrix);
-        var i = 0, j = 0, len = matrix.length, line = [], lineLength = 0;
+        var i = 0, j = 0, size = matrix.length, line = [], lineLength = 0;
         switch (d) {
             case 'left':
-                for (i = 0; i < len; i++) {
+                for (i = 0; i < size; i++) {
                     line = filled.filter(function (item) {
-                        return item.flag[1] === i;
+                        return item.flag[0] === i;
                     });
                     lineLength = line.length;
                     for (j = 0; j < lineLength; j++) {
-                        matrix[i][j] = line[j].value;
                         matrix[line[j].flag[0]][line[j].flag[1]] = 0;
+                        matrix[i][j] = line[j].value;
                     }
                 }
                 break;
             case 'right':
-                for (i = 0; i < len; i++) {
-                    line = filled.filter(function (item) {
-                        return item.flag[1] === i;
-                    });
-                    lineLength = line.length;
-                    for (j = len - 1; j >= lineLength; j--) {
-                        matrix[i][j] = line[j].value;
-                        matrix[line[j].flag[0]][line[j].flag[1]] = 0;
-                    }
-                }
-                break;
-            case 'up':
-                for (i = 0; i < len; i++) {
+                for (i = 0; i < size; i++) {
                     line = filled.filter(function (item) {
                         return item.flag[0] === i;
                     });
                     lineLength = line.length;
                     for (j = 0; j < lineLength; j++) {
-                        matrix[j][i] = line[j].value;
+                        matrix[line[lineLength - j - 1].flag[0]][line[lineLength - j - 1].flag[1]] = 0;
+                        matrix[i][size - j - 1] = line[lineLength - j - 1].value;
+                    }
+                }
+                break;
+            case 'up':
+                for (i = 0; i < size; i++) {
+                    line = filled.filter(function (item) {
+                        return item.flag[1] === i;
+                    });
+                    lineLength = line.length;
+                    for (j = 0; j < lineLength; j++) {
                         matrix[line[j].flag[0]][line[j].flag[1]] = 0;
+                        matrix[j][i] = line[j].value;
                     }
                 }
                 break;
             case 'down':
-                for (i = 0; i < len; i++) {
+                for (i = 0; i < size; i++) {
                     line = filled.filter(function (item) {
-                        return item.flag[0] === i;
+                        return item.flag[1] === i;
                     });
                     lineLength = line.length;
-                    for (j = len - 1; j >= lineLength; j--) {
-                        matrix[j][i] = line[len - j - 1].value;
-                        matrix[line[len - j - 1].flag[0]][line[len - j - 1].flag[1]] = 0;
+                    for (j = 0; j < lineLength; j++) {
+                        matrix[line[lineLength - j - 1].flag[0]][line[lineLength - j - 1].flag[1]] = 0;
+                        matrix[size - j - 1][i] = line[lineLength - j - 1].value;
                     }
                 }
                 break;
         }
     }
 
-    var Matrix = {
-        // Matrix data
-        data: [],
+    // Merge adjacent items if they are the same and larger than 0.
+    function merge(matrix, d, callback) {
+        var i = 0, j = 0, size = matrix.length, singleStepScore = 0,
+            isFun = (callback instanceof Function);
+        switch (d) {
+            case 'left':
+                for (i = 0; i < size; i++) {
+                    for (j = 0; j < size - 1; j++) {
+                        if (matrix[i][j] > 0 && matrix[i][j] === matrix[i][j + 1]) {
+                            matrix[i][j] *= 2;
+                            singleStepScore += matrix[i][j];
+                            matrix[i][j + 1] = 0;
+                        }
+                    }
+                }
+                break;
+            case 'right':
+                for (i = 0; i < size; i++) {
+                    for (j = size - 1; j > 0; j--) {
+                        if (matrix[i][j] > 0 && matrix[i][j] === matrix[i][j - 1]) {
+                            matrix[i][j] *= 2;
+                            singleStepScore += matrix[i][j];
+                            matrix[i][j - 1] = 0;
+                        }
+                    }
+                }
+                break;
+            case 'up':
+                for (i = 0; i < size; i++) {
+                    for (j = 0; j < size - 1; j++) {
+                        if (matrix[j][i] > 0 && matrix[j][i] === matrix[j + 1][i]) {
+                            matrix[j][i] *= 2;
+                            singleStepScore += matrix[j][i];
+                            matrix[j + 1][i] = 0;
+                        }
+                    }
+                }
+                break;
+            case 'down':
+                for (i = 0; i < size; i++) {
+                    for (j = size - 1; j > 0; j--) {
+                        if (matrix[j][i] > 0 && matrix[j][i] === matrix[j - 1][i]) {
+                            matrix[j][i] *= 2;
+                            singleStepScore += matrix[j][i];
+                            matrix[j - 1][i] = 0;
+                        }
+                    }
+                }
+                break;
+        }
+        isFun ? callback(singleStepScore) : '';
+    }
 
+    // Generate 2 or 4 randomly.
+    function random2_4() {
+        return Math.floor(Math.random() * 100) >= 50 ? 4 : 2;
+    }
+
+    // Find an empty item's coordinate randomly.
+    function findEmptyItemCoord(matrix) {
+        var len = 0, flag = 0, emptySet = [], size = matrix.length;
+        for (i = 0; i < size; i++) {
+            for (j = 0; j < size; j++) {
+                if (matrix[i][j] === 0) {
+                    emptySet.push([i, j]);
+                }
+            }
+        }
+        len = emptySet.length;
+        if (len === 0) {
+            return [];
+        } else if (len === 1) {
+            return emptySet[0];
+        }
+        flag = Math.floor(Math.random() * len);
+        return emptySet[flag];
+    }
+
+    // Fill numbers in empty items randomly.
+    function fillNumbers(matrix) {
+        var i = 0, item = [], x, y, size = matrix.length;
+        for (i = 0; i < size - 2; i++) {
+            item = findEmptyItemCoord(matrix);
+            if (item.length === 2) {
+                x = item[0];
+                y = item[1];
+                matrix[x][y] = random2_4();
+            }
+        }
+    }
+
+    // Set GUI for 2048
+    function initGUI(matrix) {
+        var root = document.createElement('div'),
+            ul = null,
+            i = 0, j = 0, len = matrix.length,
+            list = [], item = null;
+        for (i = 0; i < len; i++) {
+            list[i] = [];
+            ul = document.createElement('ul');
+            for (j = 0; j < len; j++) {
+                item = document.createElement('li');
+                list[i][j] = item;
+                ul.appendChild(list[i][j]);
+            }
+            root.appendChild(ul);
+        }
+        return {
+            list: list,
+            root: root
+        };
+    }
+
+    // Set background color and font color for every single cell.
+    function generateColorByNumber(number) {
+        var log = 0;
+        var color = {
+            '0':  {bgColor: '#cbc2b2', color: '#333'},
+            '1':  {bgColor: '#ebe4d9', color: '#333'},
+            '2':  {bgColor: '#eedec7', color: '#333'},
+            '3':  {bgColor: '#f39763', color: '#fff'},
+            '4':  {bgColor: '#f29c5c', color: '#fff'},
+            '5':  {bgColor: '#ef8161', color: '#fff'},
+            '6':  {bgColor: '#f16432', color: '#fff'},
+            '7':  {bgColor: '#eed170', color: '#fff'},
+            '8':  {bgColor: '#edce5d', color: '#fff'},
+            '9':  {bgColor: '#edc850', color: '#fff'},
+            '10': {bgColor: '#edc53f', color: '#fff'},
+            '11': {bgColor: '#edc22e', color: '#fff'},
+            '12': {bgColor: '#b884ac', color: '#fff'},
+            '13': {bgColor: '#b06ca9', color: '#fff'},
+            '14': {bgColor: '#7f3d7a', color: '#fff'},
+            '15': {bgColor: '#6158b1', color: '#fff'},
+            '16': {bgColor: '#3a337b', color: '#fff'},
+            '17': {bgColor: '#0f4965', color: '#fff'},
+            '18': {bgColor: '#666', color: '#fff'},
+            '19': {bgColor: '#333', color: '#fff'},
+            '20': {bgColor: '#000', color: '#fff'}
+        };
+        if (number) {
+            log = Math.log2(number);
+        }
+        return color[String(log)];
+    }
+
+    // Set font size for every single cell.
+    function generateSizeByNumber(number) {
+        var len = String(number).length;
+        if (len < 4) {
+            return 18;
+        }
+        if (len < 6) {
+            return 16;
+        }
+        return 14;
+    }
+
+    // Draw GUI when matrix move and merge occurd.
+    function drawGUI(matrix, list) {
+        var i = 0, j = 0, len = matrix.length, color = null;
+        for (i = 0; i < len; i++) {
+            for (j = 0; j < len; j++) {
+                color = generateColorByNumber(matrix[i][j]);
+                list[i][j].textContent = matrix[i][j] === 0 ? ' ' : matrix[i][j];
+                list[i][j].style.background = color.bgColor;
+                list[i][j].style.color = color.color;
+                list[i][j].style.fontSize = generateSizeByNumber(matrix[i][j]) + 'px';
+            }
+        }
+    }
+
+    // Add key event for global object.
+    function registerEvent(callback) {
+        window.addEventListener('keydown', function (event) {
+            var code = event.keyCode;
+            callback.call(this, code);
+        });
+    }
+
+    var GameManager = {
+        // Left key.
+        ARROW_LEFT: 37,
+        // Up key.
+        ARROW_UP: 38,
+        // Right key.
+        ARROW_RIGHT: 39,
+        // Down key.
+        ARROW_DOWN: 40,
+
+        // Matrix data.
+        data: [],
         // Matrix size, default size is 4 x 4.
         size: 4,
 
-        // Initial matrix data with 0.
-        init: function () {
-            var i = 0, j = 0;
+        // Game score.
+        score: 0,
+        // Best score
+        bestScore: 0,
+        // Game time.
+        time: 0,
+        // Game steps.
+        steps: 0,
+        // current max number.
+        max: 0,
+        // All list elements.
+        elements: [],
+
+        // Initial matrix data with random numbers and zeros.
+        init: function (size, parent) {
+            var i = 0, j = 0, gui = {};
+            this.size = size || 4;
             for (i = 0; i < this.size; i++) {
                 this.data[i] = [];
                 for (j = 0; j < this.size; j++) {
                     this.data[i][j] = 0;
                 }
             }
+            gui = initGUI(this.data);
+            this.score = 0;
+            this.step = 0;
+            this.max = 0;
+            this.time = 0;
+            this.elements = gui.list;
+            if (parent instanceof HTMLElement) {
+                parent.appendChild(gui.root);
+                return this;
+            }
+            throw "Parameter 2 should be a HTML element";
         },
 
-        // Set size of matrix, default size is 4.
-        setSize: function (size) {
-            this.size = size;
-        },
-
-        // Get matrix size.
-        getSize: function () {
-            return this.size;
+        // Game is beginning
+        start: function () {
+            var self = this;
+            fillNumbers(self.data);
+            drawGUI(self.data, self.elements);
+            registerEvent(function (code) {
+                switch (code) {
+                    case self.ARROW_UP:
+                        self.go('up');
+                        break;
+                    case self.ARROW_DOWN:
+                        self.go('down');
+                        break;
+                    case self.ARROW_LEFT:
+                        self.go('left');
+                        break;
+                    case self.ARROW_RIGHT:
+                        self.go('right');
+                        break;
+                }
+                drawGUI(self.data, self.elements);
+            });
         },
 
         // Sugar for array can be merged or moved.
@@ -178,136 +404,73 @@ var _2048 = (function (window) {
                     return canGoDown(matrix);
             }
             throw 'Parameter direction type required.';
-        }
-
-    };
-
-    var Score = {
-        score: 0,
-        setScore: function (score) {
-            this.score = score;
         },
+
+        // Move and merge matrix when event triggered.
+        go: function (d) {
+            var matrix = this.data, self = this;
+            if (d) {
+                if (this.canGo(d)) {
+                    move(matrix, d);
+                    merge(matrix, d, function (score) {
+                        self.score += score;
+                    });
+                    move(matrix, d);
+                    fillNumbers(matrix);
+                    return;
+                }
+            } else {
+                throw 'Parameter direction type required.';
+            }
+        },
+
+        // Get matrix size.
+        getSize: function () {
+            return this.size;
+        },
+
+        // Calculate current max number.
+        calculateMax: function () {
+            var i = 0, len = 0, max = [];
+            len = this.data.length;
+            for (i = 0; i < len; i++) {
+                max.push(Math.max(this.data[i]));
+            }
+            this.max = Math.max(max);
+        },
+
+        // Get current max number.
+        getMax: function () {
+            return this.max;
+        },
+
+        // Win handler
+        isWin: function () {
+            return this.getMax() === 2048;
+        },
+
+        // Is game no way to go.
+        isGameOver: function () {
+            return !(this.canGo('left') ||
+                    this.canGo('right') ||
+                    this.canGo('up') ||
+                    this.canGo('down'));
+        },
+
+        // Get score
         getScore: function () {
             return this.score;
         }
     };
 
-    var Gui = {
-
-    };
-
-    var Operator = {
-        ARROW_LEFT: 37,
-        ARROW_UP: 38,
-        ARROW_RIGHT: 39,
-        ARROW_DOWN: 40,
-        // Add event for direction key.
-        addKeyEvent: function (element, callback) {
-            element.addEventListener('keyup', function (e) {
-                var code = e.keyCode;
-                if (callback instanceof Function) {
-                    callback.call(code);
-                }
-            });
-        }
-    };
-
-
-    // 随机生成2或4
-    function random2_4() {
-        return Math.floor(Math.random() * 100) >= 50 ? 4 : 2;
-    }
-
-    // 随机找到一个空白节点坐标
-    function findEmptyItemCoord() {
-        var len = 0, flag = 0;
-        emptySet = [];
-        for (i = 0; i < _size; i++) {
-            for (j = 0; j < _size; j++) {
-                if (matrix[i][j] === 0) {
-                    emptySet.push([i, j]);
-                }
-            }
-        }
-        len = emptySet.length;
-        if (len === 0) {
-            return [];
-        } else if (len === 1) {
-            return emptySet[0];
-        }
-        flag = Math.floor(Math.random() * len);
-        return emptySet[flag];
-    }
-
-    // 在空白处填充随机数字
-    function fillNumberBySize() {
-        var i = 0, item = [], x, y;
-        for (i = 0; i < _size - 2; i++) {
-            item = findEmptyItemCoord();
-            if (item.length === 2) {
-                x = item[0];
-                y = item[1];
-                matrix[x][y] = random2_4();
-                filledSet.push({
-                    flag: [x, y],
-                    value: matrix[x][y]
-                });
-            }
-        }
-    }
-
-    // 根据数字随机生成颜色
-    function randomColorByNumber(number) {
-
-    }
-
-    function init() {
-        initMatrix();
-        fillNumberBySize();
-        return this;
-    }
-
-    function displayMatrix(matrix) {
-        var i = 0, j = 0, str = '', _size = matrix.length;
-        for (i = 0; i < _size; i++) {
-            str += '\n[';
-            for (j = 0; j < _size; j++) {
-                str += matrix[i][j] + '  ';
-            }
-            str = str.substring(0, str.length - 2);
-            str += ']';
-        }
-        return str;
-    }
-
     return {
-        canGoLeft: canGoLeft,
-        canGoRight: canGoRight,
-        canGoeUp: canGoeUp,
-        canGoDown: canGoDown,
-        getFilledItems: getFilledItems,
-        move: move,
-        displayMatrix: displayMatrix
+        getScore: GameManager.getScore,
+        GameManager: GameManager
     };
-}(window));
+}(window, document));
 
-var matrix = [
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0]
-];
-console.log(_2048.displayMatrix(matrix));
-console.log('canGoLeft  ' + _2048.canGoLeft(matrix));
-console.log('canGoRight ' + _2048.canGoRight(matrix));
-console.log('canGoeUp   ' + _2048.canGoeUp(matrix));
-console.log('canGoDown  ' + _2048.canGoDown(matrix));
-console.log(_2048.getFilledItems(matrix));
-_2048.move(matrix, 'up');
-console.log('up\n', _2048.displayMatrix(matrix));
-_2048.move(matrix, 'down');
-console.log('down\n', _2048.displayMatrix(matrix));
-_2048.move(matrix, 'left');
-console.log('left\n', _2048.displayMatrix(matrix));
-_2048.move(matrix, 'right');
-console.log('right\n', _2048.displayMatrix(matrix));
+
+window.onload = function () {
+    var parent = document.querySelector('.content');
+    _2048.GameManager.init(4, parent).start();
+};

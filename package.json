@@ -1,0 +1,23 @@
+{
+  "name": "game-2048",
+  "version": "1.0.0",
+  "description": "an 2048 game with Javascript",
+  "main": "2048.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dlulu/game-2048.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dlulu/game-2048/issues"
+  },
+  "homepage": "https://github.com/dlulu/game-2048#readme",
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-mocha": "^3.0.1"
+  }
+}
