@@ -227,22 +227,46 @@ var _2048 = (function (window, document) {
         }
     }
 
+    // Get window size.
+    function getWindowSize() {
+        return {
+            w: window.screen.width,
+            h: window.screen.height
+        };
+    }
+
+    // Set list items' size.
+    function setItemSize(winX, size, elem, wrapper) {
+        var itemSize = 0;
+        if (winX > 640) {
+            return;
+        }
+        itemSize = (winX - 40 - size * 5) / size + 'px';
+        elem.style.width = itemSize;
+        elem.style.height = itemSize;
+        elem.style.lineHeight = itemSize;
+    }
+
     // Set GUI for 2048
     function initGUI(matrix) {
         var root = document.createElement('div'),
             ul = null,
             i = 0, j = 0, len = matrix.length,
             list = [], item = null;
+        var winWidth = getWindowSize().w;
         for (i = 0; i < len; i++) {
             list[i] = [];
             ul = document.createElement('ul');
             for (j = 0; j < len; j++) {
                 item = document.createElement('li');
+                item.appendChild(document.createElement('div'));
+                setItemSize(winWidth, len, item);
                 list[i][j] = item;
                 ul.appendChild(list[i][j]);
             }
             root.appendChild(ul);
         }
+        root.style.position = 'relative';
         return {
             list: list,
             root: root
@@ -295,23 +319,84 @@ var _2048 = (function (window, document) {
 
     // Draw GUI when matrix move and merge occurd.
     function drawGUI(matrix, list) {
-        var i = 0, j = 0, len = matrix.length, color = null;
+        var i = 0, j = 0, len = matrix.length, color = null, item = null;
         for (i = 0; i < len; i++) {
             for (j = 0; j < len; j++) {
                 color = generateColorByNumber(matrix[i][j]);
-                list[i][j].textContent = matrix[i][j] === 0 ? ' ' : matrix[i][j];
-                list[i][j].style.background = color.bgColor;
-                list[i][j].style.color = color.color;
-                list[i][j].style.fontSize = generateSizeByNumber(matrix[i][j]) + 'px';
+                item = list[i][j].children[0];
+                item.textContent = matrix[i][j] === 0 ? ' ' : matrix[i][j];
+                item.style.background = color.bgColor;
+                item.style.color = color.color;
+                item.style.fontSize = generateSizeByNumber(matrix[i][j]) + 'px';
             }
         }
     }
 
     // Add key event for global object.
     function registerEvent(callback) {
-        window.addEventListener('keydown', function (event) {
+        function keyEventHandler(event) {
             var code = event.keyCode;
             callback.call(this, code);
+        }
+        window.addEventListener('keydown', keyEventHandler);
+        return keyEventHandler;
+    }
+
+    function saveMaxScore(size, score, maxScore) {
+        if (score > maxScore) {
+            window.localStorage.setItem('maxScore_' + size, score);
+        }
+    }
+
+    function getMaxScoreFromStorage(size) {
+        return parseInt(window.localStorage.getItem("maxScore_" + size) || 0, 10);
+    }
+
+    function displayMaxScore(item, score, maxScore) {
+        item.textContent = score > maxScore ? score : maxScore;
+    }
+
+    function gameOverHandler(rootElement, scoreElement, restartCallback) {
+        var wrapper = document.createElement('div'),
+            h3 = document.createElement('h3'),
+            restartBtn = document.createElement('button');
+        h3.className = 'gameover-title';
+        restartBtn.className = 'btn-restart';
+        wrapper.className = 'gameover-wrapper';
+        h3.textContent = 'Game Over!!!';
+        restartBtn.textContent = 'Try Again';
+        wrapper.appendChild(h3);
+        wrapper.appendChild(restartBtn);
+        rootElement.appendChild(wrapper);
+        restartBtn.addEventListener('click', function () {
+            scoreElement.textContent = 0;
+            restartCallback.call(this, wrapper);
+        });
+    }
+
+    function winHandler(rootElement, scoreElement, restartCallback, continueCallback) {
+        var wrapper = document.createElement('div'),
+            h3 = document.createElement('h3'),
+            restartBtn = document.createElement('button'),
+            continueBtn = document.createElement('button');
+        h3.className = 'win-title';
+        restartBtn.className = 'win-restart';
+        continueBtn.className = 'win-continue';
+        wrapper.className = 'win-wrapper';
+        h3.textContent = 'You Win!!!';
+        restartBtn.textContent = 'Restart';
+        continueBtn.textContent = 'Continue';
+        wrapper.appendChild(h3);
+        wrapper.appendChild(restartBtn);
+        wrapper.appendChild(continueBtn);
+        rootElement.appendChild(wrapper);
+        restartBtn.addEventListener('click', function () {
+            scoreElement.textContent = 0;
+            restartCallback.call(this, wrapper);
+        });
+        continueBtn.addEventListener('click', function () {
+            wrapper.remove();
+            continueCallback.call(this);
         });
     }
 
@@ -340,13 +425,26 @@ var _2048 = (function (window, document) {
         steps: 0,
         // current max number.
         max: 0,
+        // Wrapper element.
+        wrapper: null,
+        // Root element.
+        root: null,
         // All list elements.
         elements: [],
+        // Score element.
+        scoreElement: null,
+        // Max score element.
+        maxScoreElement: null,
 
         // Initial matrix data with random numbers and zeros.
-        init: function (size, parent) {
-            var i = 0, j = 0, gui = {};
-            this.size = size || 4;
+        init: function (config) {
+            var i = 0, j = 0, gui = {},
+                parent = config.parent;
+            this.config = config;
+            this.scoreElement = config.scoreElement;
+            this.wrapper = config.wrapper;
+            this.maxScoreElement = config.max;
+            this.size = config.size || 4;
             for (i = 0; i < this.size; i++) {
                 this.data[i] = [];
                 for (j = 0; j < this.size; j++) {
@@ -359,11 +457,20 @@ var _2048 = (function (window, document) {
             this.max = 0;
             this.time = 0;
             this.elements = gui.list;
-            if (parent instanceof HTMLElement) {
+            this.root = gui.root;
+            this.isContinue = false;
+            this.max = getMaxScoreFromStorage(this.size);
+            try {
+                if (getWindowSize().w > 640) {
+                    this.wrapper.style.width = 40 + this.size * 5 + 60 * this.size + 'px';
+                }
+                this.scoreElement.textContent = this.score;
+                this.maxScoreElement.textContent = this.max;
                 parent.appendChild(gui.root);
                 return this;
+            } catch (e) {
+                throw e;
             }
-            throw "Parameter 2 should be a HTML element";
         },
 
         // Game is beginning
@@ -371,7 +478,19 @@ var _2048 = (function (window, document) {
             var self = this;
             fillNumbers(self.data);
             drawGUI(self.data, self.elements);
-            registerEvent(function (code) {
+            var handler = registerEvent(function (code) {
+                if (self.isGameOver()) {
+                    window.removeEventListener('keydown', handler);
+                    gameOverHandler(self.root, self.scoreElement, function (el) {
+                        el.remove();
+                        self.root.remove();
+                        self.init(self.config).start();
+                    });
+                    return;
+                }
+                if (self.notConfirm) {
+                    return;
+                }
                 switch (code) {
                     case self.ARROW_UP:
                         self.go('up');
@@ -387,7 +506,28 @@ var _2048 = (function (window, document) {
                         break;
                 }
                 drawGUI(self.data, self.elements);
+                self.scoreElement.textContent = self.score;
+                saveMaxScore(self.size, self.score, self.max);
+                displayMaxScore(self.maxScoreElement, self.score, self.max);
+                if (self.isWin() && !self.isContinue) {
+                    winHandler(self.root, self.scoreElement, function (el) {
+                        el.remove();
+                        self.root.remove();
+                        self.init(self.config).start();
+                        self.notConfirm = false;
+                    }, function () {
+                        self.notConfirm = false;
+                        self.isContinue = true;
+                    });
+                    self.notConfirm = true;
+                    return;
+                }
             });
+            return this;
+        },
+
+        restart: function () {
+
         },
 
         // Sugar for array can be merged or moved.
@@ -441,7 +581,15 @@ var _2048 = (function (window, document) {
 
         // Get current max number.
         getMax: function () {
-            return this.max;
+            var i = 0, j = 0, max = 0;
+            for (i = 0; i < this.size; i++) {
+                for (j = 0; j < this.size; j++) {
+                    if (max < this.data[i][j]) {
+                        max = this.data[i][j];
+                    }
+                }
+            }
+            return max;
         },
 
         // Win handler
@@ -455,11 +603,6 @@ var _2048 = (function (window, document) {
                     this.canGo('right') ||
                     this.canGo('up') ||
                     this.canGo('down'));
-        },
-
-        // Get score
-        getScore: function () {
-            return this.score;
         }
     };
 
@@ -468,9 +611,3 @@ var _2048 = (function (window, document) {
         GameManager: GameManager
     };
 }(window, document));
-
-
-window.onload = function () {
-    var parent = document.querySelector('.content');
-    _2048.GameManager.init(4, parent).start();
-};

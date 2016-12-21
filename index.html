@@ -5,46 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>2048</title>
+    <link rel="stylesheet" href="./2048.css">
     <script src="2048.js"></script>
-    <style media="screen">
-        ul {
-            list-style-type: none;
-            margin: 0;
-            padding: 0;
-            font-size: 0;
-        }
-        li {
-            display: inline-block;
-            vertical-align: middle;
-            width: 60px;
-            height: 60px;
-            line-height: 60px;
-            text-align: center;
-            font-family: 'Microsoft Yahei';
-            font-weight: bold;
-            background: #eee;
-            color: #345;
-            border: 6px solid #bbada0;
-            border-width: 0 6px 6px 0;
-        }
-        ul li:first-child {
-            border-left-width: 6px;
-        }
-        ul:first-child li {
-            border-top-width: 6px;
-        }
-    </style>
 </head>
 <body>
     <div class="wrapper">
         <div class="top">
-            <h3>2048</h3>
-            <div>score</div>
-            <div>best score</div>
+            <h3 class="title">2048</h3>
+            <div class="score-box">
+                <div class="score">
+                    <p>Score</p>
+                    <p>206352</p>
+                </div>
+                <div class="best-score">
+                    <p>Best Score</p>
+                    <p>372652</p>
+                </div>
+            </div>
         </div>
-        <div class="content">
-
-        </div>
+        <div class="content"></div>
     </div>
+    <script>
+        window.onload = function () {
+            var parent = document.querySelector('.content'),
+                score = document.querySelectorAll('.score p')[1],
+                wrapper = document.querySelector('.wrapper'),
+                max = document.querySelectorAll('.best-score p')[1];
+            _2048.GameManager.init({
+                size: 4,
+                parent: parent,
+                scoreElement: score,
+                max: max,
+                wrapper: wrapper
+            }).start();
+        };
+    </script>
 </body>
 </html>
