@@ -191,7 +191,7 @@ var _2048 = (function (window, document) {
 
     // Generate 2 or 4 randomly.
     function random2_4() {
-        return Math.floor(Math.random() * 100) >= 50 ? 4 : 2;
+        return Math.floor(Math.random() * 100) >= 70 ? 4 : 2;
     }
 
     // Find an empty item's coordinate randomly.
