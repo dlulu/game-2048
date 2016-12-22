@@ -593,7 +593,7 @@ var _2048 = (function (window, document) {
 
         // Win handler
         isWin: function () {
-            return this.getMax() === 64;
+            return this.getMax() === 2048;
         },
 
         // Is game no way to go.
