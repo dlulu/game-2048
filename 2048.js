@@ -511,10 +511,7 @@ var _2048 = (function (window, document) {
                 displayMaxScore(self.maxScoreElement, self.score, self.max);
                 if (self.isWin() && !self.isContinue) {
                     winHandler(self.root, self.scoreElement, function (el) {
-                        el.remove();
-                        self.root.remove();
-                        self.init(self.config).start();
-                        self.notConfirm = false;
+                        self.restart();
                     }, function () {
                         self.notConfirm = false;
                         self.isContinue = true;
@@ -527,7 +524,9 @@ var _2048 = (function (window, document) {
         },
 
         restart: function () {
-
+            this.root.remove();
+            this.init(this.config).start();
+            this.notConfirm = false;
         },
 
         // Sugar for array can be merged or moved.
