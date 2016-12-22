@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/dlulu/game-2048#readme",
   "devDependencies": {
+    "browser-sync": "^2.18.5",
     "gulp": "^3.9.1",
     "gulp-mocha": "^3.0.1"
   }
